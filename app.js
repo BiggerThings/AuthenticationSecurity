@@ -4,11 +4,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const SHA256 = require('crypto-js/sha256');
+
+//bcrypt
+const bcrypt = require('bcryptjs');
+const saltRounds = 10;
 
 const app = express();
-
-console.log(SHA256('1234asdf').toString());
 
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
@@ -24,22 +25,24 @@ const userSchema = new mongoose.Schema({
 
 const User = new mongoose.model('User', userSchema);
 
-app.get('/', function (req, res) {
+app.get('/', (req, res) => {
     res.render('home');
 });
 
-app.get('/login', function (req, res) {
+app.get('/login', (req, res) => {
     res.render('login');
 });
 
-app.get('/register', function (req, res) {
+app.get('/register', (req, res) => {
     res.render('register');
 });
 
-app.post('/register', function (req, res) {
+app.post('/register', (req, res) => {
+    const hash = bcrypt.hashSync(req.body.password, saltRounds);
+
     const newUser = new User({
         email: req.body.username,
-        password: SHA256(req.body.password).toString()
+        password: hash
     });
 
     newUser.save()
@@ -51,13 +54,13 @@ app.post('/register', function (req, res) {
     })
 });
 
-app.post('/login', function (req, res) {
+app.post('/login', (req, res) => {
     const username = req.body.username;
-    const password = SHA256(req.body.password).toString();
+    const password = req.body.password;
 
     User.findOne({ email: username})
     .then((foundUser) => {
-        if (foundUser.password === password) {
+        if (bcrypt.compareSync(password ,foundUser.password)) {
             res.render('secrets');
         }
     })
@@ -68,6 +71,6 @@ app.post('/login', function (req, res) {
 
 
 
-app.listen(3000, function () {
+app.listen(3000, () => {
     console.log('Server started on port 3000'); 
 });
